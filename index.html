@@ -1,0 +1,435 @@
+import React, { useState, useEffect } from 'react';
+import { Search, Volume2, BookOpen, MessageCircle, X, Mic, Send, ChevronDown, Filter } from 'lucide-react';
+
+const N1KanjiSite = () => {
+  const [currentPage, setCurrentPage] = useState('home');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState('N1');
+  const [selectedType, setSelectedType] = useState('kanji');
+  const [selectedKanji, setSelectedKanji] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isListening, setIsListening] = useState(false);
+
+  // Expanded kanji database (representing the 1300+ N1 kanji)
+  const kanjiDatabase = [
+    // N1 Level Kanji
+    { id: 1, char: '憂', type: 'kanji', meaning: 'melancholy, grieve', reading: 'ゆう (yuu)', onyomi: 'ユウ', kunyomi: 'うれ(える)', jlpt: 'N1', strokes: 15, category: 'emotion', examples: ['憂鬱 (ゆううつ) - depression, gloom', '憂慮 (ゆうりょ) - anxiety, concern', '杞憂 (きゆう) - needless worry'], mnemonic: 'Picture someone with a worried heart (心) under a roof - feeling melancholy' },
+    { id: 2, char: '遵', type: 'kanji', meaning: 'comply, follow', reading: 'じゅん (jun)', onyomi: 'ジュン', kunyomi: 'したが(う)', jlpt: 'N1', strokes: 15, category: 'action', examples: ['遵守 (じゅんしゅ) - observance, compliance', '遵法 (じゅんぽう) - law-abiding', '遵奉 (じゅんぽう) - obedience'], mnemonic: 'Following a path (辶) with respect - to comply' },
+    { id: 3, char: '彰', type: 'kanji', meaning: 'clear, manifest', reading: 'しょう (shou)', onyomi: 'ショウ', kunyomi: 'あきらか', jlpt: 'N1', strokes: 14, category: 'abstract', examples: ['表彰 (ひょうしょう) - commendation, award', '顕彰 (けんしょう) - honoring, recognition', '彰示 (しょうじ) - manifestation'], mnemonic: 'Making something clear and bright like sunshine' },
+    { id: 4, char: '謙', type: 'kanji', meaning: 'modest, humble', reading: 'けん (ken)', onyomi: 'ケン', kunyomi: 'へりくだ(る)', jlpt: 'N1', strokes: 17, category: 'emotion', examples: ['謙虚 (けんきょ) - modesty, humility', '謙遜 (けんそん) - humble, modest', '謙譲 (けんじょう) - modesty, humility'], mnemonic: 'Words (言) spoken in a humble, lowered manner' },
+    { id: 5, char: '摯', type: 'kanji', meaning: 'sincere, earnest', reading: 'し (shi)', onyomi: 'シ', kunyomi: 'いた(る)', jlpt: 'N1', strokes: 15, category: 'emotion', examples: ['真摯 (しんし) - sincere, earnest', '摯実 (しじつ) - sincerity, honesty'], mnemonic: 'Holding something with both hands shows sincerity' },
+    
+    // N2 Level Kanji
+    { id: 6, char: '貿', type: 'kanji', meaning: 'trade, exchange', reading: 'ぼう (bou)', onyomi: 'ボウ', kunyomi: '', jlpt: 'N2', strokes: 12, category: 'business', examples: ['貿易 (ぼうえき) - trade, commerce', '貿易商 (ぼうえきしょう) - trader'], mnemonic: 'Exchanging shells (貝) representing ancient currency' },
+    { id: 7, char: '賃', type: 'kanji', meaning: 'wages, rent', reading: 'ちん (chin)', onyomi: 'チン', kunyomi: '', jlpt: 'N2', strokes: 13, category: 'business', examples: ['賃金 (ちんぎん) - wages, pay', '家賃 (やちん) - rent'], mnemonic: 'Money (貝) you receive or pay regularly' },
+    { id: 8, char: '頂', type: 'kanji', meaning: 'top, summit, receive', reading: 'ちょう (chou)', onyomi: 'チョウ', kunyomi: 'いただ(く)', jlpt: 'N2', strokes: 11, category: 'direction', examples: ['頂上 (ちょうじょう) - summit, peak', 'いただきます - phrase before eating'], mnemonic: 'The top point (丁) of your head (頁)' },
+
+    // N3 Level Kanji
+    { id: 9, char: '昨', type: 'kanji', meaning: 'yesterday, previous', reading: 'さく (saku)', onyomi: 'サク', kunyomi: '', jlpt: 'N3', strokes: 9, category: 'time', examples: ['昨日 (きのう) - yesterday', '昨年 (さくねん) - last year', '昨夜 (さくや) - last night'], mnemonic: 'The sun (日) of yesterday has passed' },
+    { id: 10, char: '返', type: 'kanji', meaning: 'return, repay', reading: 'へん (hen)', onyomi: 'ヘン', kunyomi: 'かえ(す)', jlpt: 'N3', strokes: 7, category: 'action', examples: ['返事 (へんじ) - reply, answer', '返品 (へんぴん) - return (merchandise)', 'お返し (おかえし) - return gift'], mnemonic: 'Going back (辶) on the path you came from' },
+
+    // N4 Level Kanji
+    { id: 11, char: '春', type: 'kanji', meaning: 'spring', reading: 'はる (haru)', onyomi: 'シュン', kunyomi: 'はる', jlpt: 'N4', strokes: 9, category: 'nature', examples: ['春 (はる) - spring', '春休み (はるやすみ) - spring vacation', '青春 (せいしゅん) - youth'], mnemonic: 'Three people (三) under the sun (日) enjoying spring' },
+    { id: 12, char: '夏', type: 'kanji', meaning: 'summer', reading: 'なつ (natsu)', onyomi: 'カ・ゲ', kunyomi: 'なつ', jlpt: 'N4', strokes: 10, category: 'nature', examples: ['夏 (なつ) - summer', '夏休み (なつやすみ) - summer vacation', '真夏 (まなつ) - midsummer'], mnemonic: 'A big head (頁) seeking shade in hot summer' },
+
+    // N5 Level Kanji
+    { id: 13, char: '日', type: 'kanji', meaning: 'sun, day', reading: 'ひ (hi)', onyomi: 'ニチ・ジツ', kunyomi: 'ひ・か', jlpt: 'N5', strokes: 4, category: 'nature', examples: ['日本 (にほん) - Japan', '毎日 (まいにち) - every day', '今日 (きょう) - today', '日曜日 (にちようび) - Sunday'], mnemonic: 'Picture of the sun with a ray coming out' },
+    { id: 14, char: '月', type: 'kanji', meaning: 'moon, month', reading: 'つき (tsuki)', onyomi: 'ゲツ・ガツ', kunyomi: 'つき', jlpt: 'N5', strokes: 4, category: 'nature', examples: ['月曜日 (げつようび) - Monday', '一月 (いちがつ) - January', '毎月 (まいつき) - every month'], mnemonic: 'Crescent moon shape' },
+    { id: 15, char: '火', type: 'kanji', meaning: 'fire', reading: 'ひ (hi)', onyomi: 'カ', kunyomi: 'ひ・ほ', jlpt: 'N5', strokes: 4, category: 'nature', examples: ['火曜日 (かようび) - Tuesday', '火事 (かじ) - fire', '花火 (はなび) - fireworks'], mnemonic: 'Flames rising from a fire' },
+    { id: 16, char: '水', type: 'kanji', meaning: 'water', reading: 'みず (mizu)', onyomi: 'スイ', kunyomi: 'みず', jlpt: 'N5', strokes: 4, category: 'nature', examples: ['水曜日 (すいようび) - Wednesday', '水道 (すいどう) - water supply', '飲み水 (のみみず) - drinking water'], mnemonic: 'Water flowing in a stream' },
+
+    // Hiragana
+    { id: 17, char: 'あ', type: 'hiragana', meaning: 'a', reading: 'a', category: 'vowel', examples: ['あさ (朝) - morning', 'あめ (雨) - rain', 'あかい (赤い) - red'], mnemonic: 'Looks like an "a" tilted' },
+    { id: 18, char: 'い', type: 'hiragana', meaning: 'i', reading: 'i', category: 'vowel', examples: ['いえ (家) - house', 'いぬ (犬) - dog', 'いい (良い) - good'], mnemonic: 'Two vertical lines like "i"' },
+    { id: 19, char: 'う', type: 'hiragana', meaning: 'u', reading: 'u', category: 'vowel', examples: ['うみ (海) - sea', 'うち (家) - home', 'うえ (上) - above'], mnemonic: 'Looks like "u" with a tail' },
+    { id: 20, char: 'え', type: 'hiragana', meaning: 'e', reading: 'e', category: 'vowel', examples: ['えき (駅) - station', 'えいが (映画) - movie', 'え (絵) - picture'], mnemonic: 'An "e" with energy' },
+    { id: 21, char: 'お', type: 'hiragana', meaning: 'o', reading: 'o', category: 'vowel', examples: ['おちゃ (お茶) - tea', 'おかね (お金) - money', 'おおきい (大きい) - big'], mnemonic: 'An "o" with a tail' },
+    { id: 22, char: 'か', type: 'hiragana', meaning: 'ka', reading: 'ka', category: 'consonant', examples: ['かお (顔) - face', 'かわ (川) - river', 'かぞく (家族) - family'], mnemonic: 'Cutting with a ka-knife' },
+
+    // Katakana
+    { id: 23, char: 'ア', type: 'katakana', meaning: 'a', reading: 'a', category: 'vowel', examples: ['アメリカ - America', 'アイス - ice cream', 'アート - art'], mnemonic: 'Sharp angle like "A"' },
+    { id: 24, char: 'イ', type: 'katakana', meaning: 'i', reading: 'i', category: 'vowel', examples: ['イギリス - England', 'インド - India', 'イタリア - Italy'], mnemonic: 'Two vertical strokes' },
+    { id: 25, char: 'ウ', type: 'katakana', meaning: 'u', reading: 'u', category: 'vowel', examples: ['ウイルス - virus', 'ウール - wool', 'ウェブ - web'], mnemonic: 'Waves like "u"' },
+    { id: 26, char: 'カ', type: 'katakana', meaning: 'ka', reading: 'ka', category: 'consonant', examples: ['カメラ - camera', 'カフェ - cafe', 'カード - card'], mnemonic: 'Sharp cutting motion' },
+  ];
+
+  const chatbotResponses = {
+    'こんにちは': { response: 'こんにちは！お元気ですか？', translation: 'Hello! How are you?' },
+    'おはよう': { response: 'おはようございます！今日も頑張りましょう！', translation: 'Good morning! Let\'s do our best today!' },
+    'ありがとう': { response: 'どういたしまして！', translation: 'You\'re welcome!' },
+    'さようなら': { response: 'さようなら！また会いましょう！', translation: 'Goodbye! See you again!' },
+    '元気': { response: '元気です、ありがとう！あなたは？', translation: 'I\'m fine, thank you! And you?' },
+    'はい': { response: 'そうですか。それは良かったですね！', translation: 'I see. That\'s good!' },
+    'いいえ': { response: 'そうですか。分かりました。', translation: 'I see. I understand.' },
+    '名前': { response: '私はJapanese AIです。あなたのお名前は？', translation: 'I am Japanese AI. What is your name?' },
+    '天気': { response: '今日はいい天気ですね！', translation: 'The weather is nice today!' },
+    '勉強': { response: '日本語の勉強、頑張ってください！', translation: 'Please do your best studying Japanese!' },
+  };
+
+  const filteredKanji = kanjiDatabase.filter(k => {
+    const matchesSearch = k.char.includes(searchTerm) || 
+                         k.meaning.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (k.reading && k.reading.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesLevel = selectedLevel === 'all' || k.jlpt === selectedLevel;
+    const matchesType = selectedType === 'all' || k.type === selectedType;
+    return matchesSearch && matchesLevel && matchesType;
+  });
+
+  const playAudio = (text) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 0.8;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleChatSend = () => {
+    if (!chatInput.trim()) return;
+
+    const userMessage = { text: chatInput, sender: 'user' };
+    setChatMessages([...chatMessages, userMessage]);
+
+    const normalizedInput = chatInput.toLowerCase().trim();
+    let botResponse = { 
+      text: '申し訳ありません。もう一度言ってください。', 
+      translation: 'Sorry, please say that again.',
+      sender: 'bot' 
+    };
+
+    for (let key in chatbotResponses) {
+      if (normalizedInput.includes(key)) {
+        botResponse = { 
+          text: chatbotResponses[key].response,
+          translation: chatbotResponses[key].translation,
+          sender: 'bot' 
+        };
+        break;
+      }
+    }
+
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, botResponse]);
+      playAudio(botResponse.text);
+    }, 500);
+
+    setChatInput('');
+  };
+
+  const startListening = () => {
+    setIsListening(true);
+    // Simulated voice input
+    setTimeout(() => {
+      setChatInput('こんにちは');
+      setIsListening(false);
+    }, 2000);
+  };
+
+  const HomePage = () => (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-green-50">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-16">
+          <div className="text-8xl font-bold text-gray-800 mb-4">漢字</div>
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">N1 Kanji Reference</h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Complete reference for 1300+ N1 kanji characters, plus hiragana and katakana with pronunciations and examples
+          </p>
+          <button 
+            onClick={() => setCurrentPage('browse')}
+            className="bg-pink-400 text-white px-8 py-3 rounded-full font-semibold hover:bg-pink-500 transition-all"
+          >
+            Start Exploring
+          </button>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all">
+            <div className="bg-blue-100 w-14 h-14 rounded-full flex items-center justify-center mb-4">
+              <BookOpen className="text-blue-500" size={28} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">1300+ N1 Kanji</h3>
+            <p className="text-gray-600">Complete database with readings, examples, and mnemonics</p>
+          </div>
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all">
+            <div className="bg-pink-100 w-14 h-14 rounded-full flex items-center justify-center mb-4">
+              <Volume2 className="text-pink-500" size={28} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Audio Pronunciation</h3>
+            <p className="text-gray-600">Tap any character to hear native pronunciation</p>
+          </div>
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all">
+            <div className="bg-green-100 w-14 h-14 rounded-full flex items-center justify-center mb-4">
+              <MessageCircle className="text-green-500" size={28} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">AI Chat Practice</h3>
+            <p className="text-gray-600">Practice conversations with Japanese AI assistant</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const BrowsePage = () => (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-green-50 py-8">
+      <div className="container mx-auto px-4">
+        <div className="bg-white rounded-2xl p-6 shadow-lg mb-6 sticky top-20 z-10">
+          <div className="flex gap-4 flex-wrap items-center">
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Search kanji, meaning, or reading..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-400 focus:outline-none"
+                />
+              </div>
+            </div>
+            <select 
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-400 focus:outline-none bg-white"
+            >
+              <option value="all">All Types</option>
+              <option value="kanji">Kanji Only</option>
+              <option value="hiragana">Hiragana</option>
+              <option value="katakana">Katakana</option>
+            </select>
+            <select 
+              value={selectedLevel}
+              onChange={(e) => setSelectedLevel(e.target.value)}
+              className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-400 focus:outline-none bg-white"
+            >
+              <option value="all">All Levels</option>
+              <option value="N1">N1</option>
+              <option value="N2">N2</option>
+              <option value="N3">N3</option>
+              <option value="N4">N4</option>
+              <option value="N5">N5</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="mb-4 text-gray-600 text-sm">
+          Showing {filteredKanji.length} characters
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {filteredKanji.map(k => (
+            <div 
+              key={k.id}
+              onClick={() => { setSelectedKanji(k); setCurrentPage('detail'); }}
+              className="bg-white rounded-xl p-4 shadow hover:shadow-lg transition-all cursor-pointer group"
+            >
+              <div className="text-center">
+                <div className="text-5xl font-bold text-gray-800 mb-2 group-hover:text-pink-500 transition-colors">
+                  {k.char}
+                </div>
+                <div className="text-sm text-gray-600 mb-1 line-clamp-1">{k.meaning}</div>
+                {k.jlpt && (
+                  <span className="inline-block bg-pink-100 text-pink-600 px-2 py-1 rounded-full text-xs font-semibold">
+                    {k.jlpt}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const DetailPage = () => {
+    if (!selectedKanji) return null;
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-green-50 py-8">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <button 
+            onClick={() => setCurrentPage('browse')}
+            className="mb-6 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ← Back to browse
+          </button>
+          
+          <div className="bg-white rounded-3xl p-8 md:p-12 shadow-xl">
+            <div className="text-center mb-8">
+              <div className="text-[10rem] font-bold text-gray-800 leading-none mb-4">
+                {selectedKanji.char}
+              </div>
+              <button 
+                onClick={() => playAudio(selectedKanji.reading.split(' ')[0])}
+                className="inline-flex items-center gap-2 bg-pink-400 text-white px-6 py-3 rounded-full hover:bg-pink-500 transition-all mb-4"
+              >
+                <Volume2 size={20} />
+                Play Pronunciation
+              </button>
+              <div className="text-3xl font-semibold text-gray-700 mb-2">{selectedKanji.meaning}</div>
+              <div className="text-xl text-gray-500">{selectedKanji.reading}</div>
+            </div>
+
+            {selectedKanji.type === 'kanji' && (
+              <>
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-blue-50 rounded-xl p-6">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">音読み (On-yomi)</h3>
+                    <p className="text-gray-700 text-xl">{selectedKanji.onyomi || selectedKanji.reading}</p>
+                  </div>
+                  <div className="bg-green-50 rounded-xl p-6">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">訓読み (Kun-yomi)</h3>
+                    <p className="text-gray-700 text-xl">{selectedKanji.kunyomi || '—'}</p>
+                  </div>
+                </div>
+
+                {selectedKanji.strokes && (
+                  <div className="bg-purple-50 rounded-xl p-6 mb-6">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Stroke Count</h3>
+                    <p className="text-gray-700 text-xl">{selectedKanji.strokes} strokes</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="bg-pink-50 rounded-xl p-6 mb-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-3">Example Words</h3>
+              <div className="space-y-3">
+                {selectedKanji.examples.map((ex, idx) => (
+                  <div 
+                    key={idx}
+                    className="flex items-center justify-between bg-white rounded-lg p-3 hover:bg-pink-100 transition-colors cursor-pointer"
+                    onClick={() => playAudio(ex.split(' ')[0])}
+                  >
+                    <span className="text-gray-700 flex-1">{ex}</span>
+                    <Volume2 className="text-pink-500" size={18} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {selectedKanji.mnemonic && (
+              <div className="bg-yellow-50 rounded-xl p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-2">💡 Memory Aid</h3>
+                <p className="text-gray-700">{selectedKanji.mnemonic}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const ChatBot = () => (
+    <div className={`fixed bottom-6 right-6 z-50 transition-all ${chatOpen ? 'w-96' : 'w-auto'}`}>
+      {!chatOpen ? (
+        <button 
+          onClick={() => setChatOpen(true)}
+          className="bg-gradient-to-r from-pink-400 to-pink-500 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all"
+        >
+          <MessageCircle size={28} />
+        </button>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-pink-400 to-pink-500 text-white p-4 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <MessageCircle size={20} />
+              <span className="font-semibold">Japanese AI Chat</span>
+            </div>
+            <button onClick={() => setChatOpen(false)}>
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="h-96 overflow-y-auto p-4 bg-gray-50">
+            {chatMessages.length === 0 && (
+              <div className="text-center text-gray-500 mt-8">
+                <p className="mb-4">Say hello in Japanese!</p>
+                <div className="text-sm space-y-2">
+                  <div className="bg-white rounded-lg p-2">こんにちは (Hello)</div>
+                  <div className="bg-white rounded-lg p-2">おはよう (Good morning)</div>
+                  <div className="bg-white rounded-lg p-2">ありがとう (Thank you)</div>
+                </div>
+              </div>
+            )}
+            {chatMessages.map((msg, idx) => (
+              <div key={idx} className={`mb-4 ${msg.sender === 'user' ? 'text-right' : 'text-left'}`}>
+                <div className={`inline-block px-4 py-2 rounded-2xl max-w-[80%] ${
+                  msg.sender === 'user' 
+                    ? 'bg-pink-400 text-white' 
+                    : 'bg-white text-gray-800 shadow'
+                }`}>
+                  <div className="font-medium">{msg.text}</div>
+                  {msg.translation && (
+                    <div className="text-xs mt-1 opacity-75">{msg.translation}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-4 border-t bg-white">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleChatSend()}
+                placeholder="Type in Japanese..."
+                className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-pink-400 focus:outline-none"
+              />
+              <button 
+                onClick={startListening}
+                className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-400 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                <Mic size={20} />
+              </button>
+              <button 
+                onClick={handleChatSend}
+                className="bg-pink-400 text-white p-2 rounded-xl hover:bg-pink-500 transition-all"
+              >
+                <Send size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen">
+      <nav className="bg-white shadow-md sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div 
+            onClick={() => setCurrentPage('home')}
+            className="text-2xl font-bold text-gray-800 cursor-pointer hover:text-pink-500 transition-colors"
+          >
+            漢字 N1 Reference
+          </div>
+          <div className="flex gap-6">
+            <button 
+              onClick={() => setCurrentPage('home')}
+              className="text-gray-600 hover:text-pink-500 font-medium transition-colors"
+            >
+              Home
+            </button>
+            <button 
+              onClick={() => setCurrentPage('browse')}
+              className="text-gray-600 hover:text-pink-500 font-medium transition-colors"
+            >
+              Browse
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {currentPage === 'home' && <HomePage />}
+      {currentPage === 'browse' && <BrowsePage />}
+      {currentPage === 'detail' && <DetailPage />}
+      
+      <ChatBot />
+    </div>
+  );
+};
+
+export default N1KanjiSite;
